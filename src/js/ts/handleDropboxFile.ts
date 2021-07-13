@@ -7,6 +7,16 @@ interface _IhandleDropboxFile {
   getFileList(): Promise<any>;
 }
 
+interface _IpostProperty {
+  url: string;
+  type: string;
+  data:string | File;
+  processData: boolean;
+  contentType: string;
+  headers: {};
+  xhr?: ()=> XMLHttpRequest;
+}
+
 export class HandleDropboxFile implements _IhandleDropboxFile{
   private accessToken: string;
 
@@ -25,7 +35,7 @@ export class HandleDropboxFile implements _IhandleDropboxFile{
   uploadFile(file: File){
     return new Promise((resolve,reject) => {
       const url = 'https://content.dropboxapi.com/2/files/upload';
-      let data: string;
+      let data = file;
 
       // 日本語ファイル名をエスケープ
       let fileName = this.escapeFileNameToUtf8(file.name);
@@ -34,20 +44,6 @@ export class HandleDropboxFile implements _IhandleDropboxFile{
         "Authorization": "Bearer " + this.accessToken,
         "Dropbox-API-Arg": '{"path": "/test/'+fileName+'","mode": "add","autorename": true,"mute": false}'
       }
-
-      const reader = new FileReader();
-
-      reader.readAsText(file);
-
-      reader.onload = () => {
-        if(reader.result == null){
-          alert("ファイル情報の取得に失敗しました");
-          return;
-        }
-        if(typeof reader.result === 'string'){
-          data = reader.result;
-        }
-
         const handleDropboxFile = new HandleDropboxFile();
 
         handleDropboxFile.sendRequest(url, data, contentType, headers).then(() => {
@@ -55,7 +51,6 @@ export class HandleDropboxFile implements _IhandleDropboxFile{
         },(error) => {
           reject(error);
         });
-      }
     });
   }
 
@@ -70,9 +65,9 @@ export class HandleDropboxFile implements _IhandleDropboxFile{
         'Dropbox-API-Arg': JSON.stringify({
           "path": path,
         }),
-      }
+      };
 
-      this.sendRequest(url, data, contentType, headers).then((res) => {
+      this.sendRequest(url, data, contentType, headers, 'download').then((res) => {
         resolve(res);
       },(error) => {
         reject(error);
@@ -118,16 +113,27 @@ export class HandleDropboxFile implements _IhandleDropboxFile{
     return this.accessToken;
   }
 
-  private sendRequest(url: string, data: string, contentType: string, headers: {}): Promise<string> {
+  private sendRequest(url: string, data: string | File, contentType: string, headers: {}, action = ''): Promise<string> {
+    let postProperty: _IpostProperty
+
+    postProperty = {
+      url: url,
+      type: 'post',
+      data: data,
+      processData: false,
+      contentType: contentType,
+      headers: headers
+    }
+
+    if(action == 'download'){
+      postProperty.xhr = function(){
+          var xhr = new XMLHttpRequest();
+          xhr.responseType= 'blob';
+          return xhr;
+      };
+    }
     return new Promise((resolve, reject) => {
-      $.ajax({
-        'url': url,
-        'type': 'post',
-        'data': data,
-        'processData': false,
-        'contentType': contentType,
-        'headers': headers,
-      }).then((data: string) => {
+      $.ajax(postProperty).then((data: string) => {
         resolve(data);
       },(error) => {
         reject(error["status"] + ":" + error["statusText"]);

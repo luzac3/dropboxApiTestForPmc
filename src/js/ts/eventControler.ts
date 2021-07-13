@@ -123,15 +123,10 @@ export class EventControler implements _IeventControler {
           const fileName = handleCookie.getCookie('fileName');
           handleCookie.delCookie('fileName');
 
-          if(typeof data !== "string"){
-            alert("ファイルがテキスト形式ではありません");
-            return;
-          }
-
           // ダウンロード用の要素を作成
           const downLoadElemnt = document.createElement("a");
           downLoadElemnt.download = fileName;
-          downLoadElemnt.href = URL.createObjectURL(new Blob([data], {type: 'text.plain'}));
+          downLoadElemnt.href = URL.createObjectURL(data);
           downLoadElemnt.dataset.downloadurl = ["text/plain", downLoadElemnt.download, downLoadElemnt.href].join(":");
           downLoadElemnt.click();
         }
